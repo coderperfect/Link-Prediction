@@ -132,7 +132,7 @@ int main(){
 
     int FIRST_LINE = 1;
 
-    ifstream f("karate.csv");
+    ifstream f("datasets/karate.csv");
 
     while (getline(f,line)) {
         if(FIRST_LINE){
