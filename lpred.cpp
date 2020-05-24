@@ -96,7 +96,7 @@ map<pair<int, int>, double> Graph:: findSimilarityValues(unordered_set<int> &ver
                 list<int>::iterator itr;
 
                 for(itr = adj[x].begin(); itr != adj[x].end(); ++itr){
-                    if(find(adj[y].begin(), adj[y].end(), *itr) != adj[y].end())
+                    if(find(adj[y].begin(), adj[y].end(), *itr) != adj[y].end() || find(adj[*itr].begin(), adj[*itr].end(), y) != adj[*itr].end())
                         z.insert(*itr);
                 }
 
@@ -132,7 +132,7 @@ int main(){
 
     int FIRST_LINE = 1;
 
-    ifstream f("../datasets/karate.csv");
+    ifstream f("karate.csv");
 
     while (getline(f,line)) {
         if(FIRST_LINE){
