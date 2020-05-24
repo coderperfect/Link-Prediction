@@ -61,6 +61,9 @@ double Graph::clusteringCoeff(int v){
         }
     }
 
+    if((adj[v].size())*(adj[v].size()-1) == 0)
+        return 0;
+
     return (double)clusters.size()/(adj[v].size())*(adj[v].size()-1);
 }
 
@@ -130,13 +133,32 @@ int main(){
     Graph *g = new Graph();
     unordered_set<int> vertices;
 
-    int FIRST_LINE = 1;
+    int FIRST_LINE = 1, EDGES = 1;
 
-    ifstream f("datasets/karate.csv");
+    ifstream f("datasets/BUP_train_0.net");
 
     while (getline(f,line)) {
         if(FIRST_LINE){
+            stringstream s(line);
+            int text[2],i=0;
+
+            while (getline (s, val, ' ')){
+                try{      
+                    text[i++] = stoi(val);
+                }
+                catch(exception e){}
+            }
+
+            g->setV(text[1]);
+
             FIRST_LINE = 0;
+            continue;
+        }
+
+        if(line != "*edges" && EDGES == 1)
+            continue;
+        else if(EDGES == 1){
+            EDGES = 0;
             continue;
         }
 
@@ -144,16 +166,16 @@ int main(){
 
         int edge[3],i=0;  
 
-        while (getline (s, val, ',')){      
+        while (getline(s, val, ' ')){      
             edge[i++] = stoi(val);
         }
         vertices.insert({edge[0],edge[1]});
         g->addEdge(edge[0],edge[1]);
     }
 
-    g->setV(vertices.size());
-
     double averageClusteringCoeff = g->averageClusteringCoeff();
+
+    cout << g->averageClusteringCoeff();
 
     map<pair<int, int>, double> similarityValues = g->findSimilarityValues(vertices, averageClusteringCoeff);
 
