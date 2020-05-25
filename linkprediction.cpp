@@ -26,8 +26,6 @@ public:
     double averageClusteringCoeff();
 
     map<pair<int, int>, double> findSimilarityValues(unordered_set<int> &, double, double);
-
-    bool isEdge(int, int);
 }; 
   
 void Graph::setV(int V) 
@@ -41,12 +39,7 @@ int Graph::getV(){
   
 void Graph::addEdge(int v, int w) 
 { 
-    adj[v].push_back(w);
-    // adj[w].push_back(v);
-}
-
-bool Graph::isEdge(int x, int y){
-    return find(adj[x].begin(), adj[x].end(), y) != adj[x].end();
+    adj[v].push_back(w); 
 }
 
 double Graph::clusteringCoeff(int v){
@@ -71,7 +64,7 @@ double Graph::clusteringCoeff(int v){
     if((adj[v].size())*(adj[v].size()-1) == 0)
         return 0;
 
-    return (double)clusters.size()/((adj[v].size())*(adj[v].size()-1));
+    return (double)clusters.size()/(adj[v].size())*(adj[v].size()-1);
 }
 
 double Graph::averageClusteringCoeff(){
@@ -134,15 +127,20 @@ map<pair<int, int>, double> Graph:: findSimilarityValues(unordered_set<int> &ver
     return similarityValues;
 }
 
-set<pair<int, int>> predictLinks(string file, double beta, int test_size){
+int main(){
     string line, val;
 
     Graph *g = new Graph();
+    Graph *gTraining = new Graph();
+
     unordered_set<int> vertices;
+    unordered_set<int> TrainingVertices;
+    
+    int no_of_edges=0;
 
     int FIRST_LINE = 1, EDGES = 1;
 
-    ifstream f(file);
+    ifstream f("datasets/BUP_train_0.net");
 
     while (getline(f,line)) {
         if(FIRST_LINE){
@@ -176,17 +174,104 @@ set<pair<int, int>> predictLinks(string file, double beta, int test_size){
         while (getline(s, val, ' ')){      
             edge[i++] = stoi(val);
         }
+        no_of_edges++;
         vertices.insert({edge[0],edge[1]});
         g->addEdge(edge[0],edge[1]);
     }
+    
+    int size=vertices.size();
 
-    double averageClusteringCoeff = g->averageClusteringCoeff();
+    int TEST_SIZE = no_of_edges/10;
+    int TestArray[TEST_SIZE][2];
+    int TrainingArray[no_of_edges-TEST_SIZE][2];
 
-    averageClusteringCoeff = 0.49;
+    int Random[TEST_SIZE];
 
-    cout << "<C>: " << averageClusteringCoeff << "\n";
+    int i=0;
+    srand(time(0));
+    while(i<TEST_SIZE){
+        int r=rand()%no_of_edges;
+        int flag=0;
+        for(int j=0;j<i;j++){
+            if(r==Random[j]){
+                flag=1;
+            }
+        }
+        if(flag==0){
+            Random[i]=r;
+            i++;
+        }
+    }
 
-    map<pair<int, int>, double> similarityValues = g->findSimilarityValues(vertices, averageClusteringCoeff, beta);
+    sort(Random,Random+TEST_SIZE);
+
+    int j=0,k=0;
+    
+    ifstream fin;
+    fin.open("datasets/BUP_train_0.net");
+    FIRST_LINE = 1;
+    EDGES = 1;
+
+//    cout<<"Training Set"<<endl;
+
+    while (getline(fin,line)) {
+        if(FIRST_LINE){
+            stringstream s(line);
+            int text[2];
+            i=0;
+
+            while (getline (s, val, ' ')){
+                try{      
+                    text[i++] = stoi(val);
+                }
+                catch(exception e){}
+            }
+
+            gTraining->setV(text[1]);
+
+            FIRST_LINE = 0;
+            continue;
+        }
+
+        if(line != "*edges" && EDGES == 1)
+            continue;
+        else if(EDGES == 1){
+            EDGES = 0;
+            continue;
+        }
+
+        stringstream s(line);
+
+        int edge[3];
+        i=0;  
+
+        while (getline(s, val, ' ')){      
+            edge[i++] = stoi(val);
+        }
+        if(Random[k]==j){
+            TestArray[k][0]=edge[0];
+            TestArray[k][1]=edge[1];
+//            cout<<edge[0]<<"->"<<edge[1]<<endl;
+            k++;
+            j++;
+            continue;
+        }
+        TrainingVertices.insert({edge[0],edge[1]});
+        gTraining->addEdge(edge[0],edge[1]);
+        TrainingArray[j-k][0]=edge[0];
+        TrainingArray[j-k][1]=edge[1];
+        j++;
+    }
+    
+    fin.close();
+
+    double averageClusteringCoeff = gTraining->averageClusteringCoeff();
+
+//    cout << gTraining->averageClusteringCoeff();
+
+    double beta = -1.84;                   //Set beta value here
+
+    map<pair<int, int>, double> similarityValues = gTraining->findSimilarityValues(TrainingVertices, averageClusteringCoeff, beta);
 
     map<pair<int, int>, double>::iterator itr;
 
@@ -200,20 +285,48 @@ set<pair<int, int>> predictLinks(string file, double beta, int test_size){
 
     sort(sortedSimilarityValues.begin(), sortedSimilarityValues.end(), less_second<pair<int, int>, double>());
 
-    set<pair<int, int>> predictedLinks;
+    cout << "\n\n\nTest size = "<<TEST_SIZE<<"\n";
 
-    for(int i=0; i<sortedSimilarityValues.size() && test_size; i++){
-        if(find(listed.begin(), listed.end(), sortedSimilarityValues[i].first) != listed.end()){
+    cout << "Predicted links are:\n--------------------------\n\n";
+
+    double tp=0,fp=0;
+    k=0;
+    for(int i=0; i<sortedSimilarityValues.size() && k<TEST_SIZE; i++){ 
+        int flag=0;
+        for(int j=0;j<no_of_edges-TEST_SIZE;j++){
+            if(TrainingArray[j][0]==sortedSimilarityValues[i].first.first && TrainingArray[j][1]==sortedSimilarityValues[i].first.second){
+                flag=1;
+                break;
+            }
+            else if(TrainingArray[j][1]==sortedSimilarityValues[i].first.first && TrainingArray[j][0]==sortedSimilarityValues[i].first.second){
+                flag=1;
+                break;
+            }
+        }
+        if(flag==1){
             continue;
         }
-
-        listed.insert(sortedSimilarityValues[i].first);
-        listed.insert(make_pair(sortedSimilarityValues[i].first.second, sortedSimilarityValues[i].first.first));
-
-        predictedLinks.insert(sortedSimilarityValues[i].first);
-
-        test_size--;
+        for(int j=0;j<TEST_SIZE;j++){
+            if(TestArray[j][0]==sortedSimilarityValues[i].first.first && TestArray[j][1]==sortedSimilarityValues[i].first.second){
+                cout<<sortedSimilarityValues[i].first.first<<"->"<<sortedSimilarityValues[i].first.second<<endl;
+                tp++;
+            }
+            if(TestArray[j][1]==sortedSimilarityValues[i].first.first && TestArray[j][0]==sortedSimilarityValues[i].first.second){
+                cout<<sortedSimilarityValues[i].first.second<<"->"<<sortedSimilarityValues[i].first.first<<endl;
+                tp++;
+            }
+        }
+        k++;
     }
 
-    return predictedLinks;
+    fp=TEST_SIZE-tp;
+    double fn=fp;
+    double tn=((size-1)*size)/2-no_of_edges-tp-fp-fn;
+    cout <<"\n\n\n";
+    cout <<"TP:"<<tp<<"\nTN:"<<tn<<"\nFP:"<<fp<<"\nFN:"<<fn<<endl;
+    double accuracy=(tp+tn)/(tp+tn+fp+fn);
+    double precision=tp/(tp+fp);
+    cout<<"Accuracy: "<<accuracy<<"\nPrecision:"<<precision<<endl;
+
+    return 0;
 }
