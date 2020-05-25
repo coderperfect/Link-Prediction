@@ -25,7 +25,7 @@ public:
 
     double averageClusteringCoeff();
 
-    map<pair<int, int>, double> findSimilarityValues(unordered_set<int> &, double);
+    map<pair<int, int>, double> findSimilarityValues(unordered_set<int> &, double, double);
 }; 
   
 void Graph::setV(int V) 
@@ -79,7 +79,7 @@ double Graph::averageClusteringCoeff(){
     return totalClusteringCoeff/V;
 }
 
-map<pair<int, int>, double> Graph:: findSimilarityValues(unordered_set<int> &vertices, double C){
+map<pair<int, int>, double> Graph:: findSimilarityValues(unordered_set<int> &vertices, double C, double beta){
     map<pair<int, int>, double> similarityValues;
 
     unordered_set<int>::iterator itrF, itrS;
@@ -118,7 +118,7 @@ map<pair<int, int>, double> Graph:: findSimilarityValues(unordered_set<int> &ver
                     if(cz == 0 || tao == 0)
                         continue;
                     
-                    similarityValues[make_pair(x,y)] += pow((double)cz*(double)tao, -1.84*C);
+                    similarityValues[make_pair(x,y)] += (double)abs(cz) * pow((double)abs(tao), beta*C);
                 }
             }
         }
@@ -177,7 +177,9 @@ int main(){
 
     cout << g->averageClusteringCoeff();
 
-    map<pair<int, int>, double> similarityValues = g->findSimilarityValues(vertices, averageClusteringCoeff);
+    double beta = -1.84;                   //Set beta value here
+
+    map<pair<int, int>, double> similarityValues = g->findSimilarityValues(vertices, averageClusteringCoeff, beta);
 
     map<pair<int, int>, double>::iterator itr;
 
@@ -191,7 +193,7 @@ int main(){
 
     sort(sortedSimilarityValues.begin(), sortedSimilarityValues.end(), less_second<pair<int, int>, double>());
 
-    int TEST_SIZE = 5;
+    int TEST_SIZE = 5;                          //Test size set here
 
     cout << "\n\n\nTest size = 5\n";
 
